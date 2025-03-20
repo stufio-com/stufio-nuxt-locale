@@ -1,5 +1,6 @@
-import { defineNuxtModule, createResolver, addPlugin, addServerHandler } from '@nuxt/kit'
+import { createResolver, defineNuxtModule, addServerHandler, addPlugin, addImportsDir } from 'nuxt/kit'
 import { fileURLToPath } from 'url'
+import type { LocaleOptions } from './types'
 
 // Module options TypeScript interface definition
 export interface ModuleOptions {
@@ -12,7 +13,7 @@ export interface ModuleOptions {
   apiHeaders?: Record<string, string>
 }
 
-export default defineNuxtModule<ModuleOptions>({
+export default defineNuxtModule<LocaleOptions>({
   meta: {
     name: 'stufio-nuxt-locale',
     configKey: 'stufioi18n',
@@ -23,36 +24,69 @@ export default defineNuxtModule<ModuleOptions>({
   defaults: {
     defaultLocale: 'en',
     locales: ['en'],
-    apiEndpoint: '/api/v1/i18n/translations/locale',
+    apiEndpoint: '',
     moduleName: 'main',
     detectBrowserLocale: true,
     cookieName: 'locale'
   },
   setup(options, nuxt) {
-    const resolver = createResolver(import.meta.url)
+    const { resolve } = createResolver(import.meta.url)
     const runtimeDir = fileURLToPath(new URL('./runtime', import.meta.url))
 
-    // Add runtime stuff to Nuxt
+    // Ensure locales array has unique values
+    options.locales = [...new Set(options.locales)]
+    
+    console.log('[stufio-i18n] Using locales:', options.locales)
+
+    // Transpile runtime
     nuxt.options.build.transpile.push(runtimeDir)
     
-    // Add server handlers for API proxying
-    addServerHandler({
-      route: '/api/_stufio/i18n/translations',
-      handler: resolver.resolve('./runtime/server/api/translations.get.ts')
-    })
-    
-    addServerHandler({
-      route: '/api/_stufio/i18n/missing-key',
-      handler: resolver.resolve('./runtime/server/api/missing.post.ts')
-    })
-    
     // Add plugins
-    addPlugin({
-      src: resolver.resolve('./runtime/plugins/i18n.ts'),
-      mode: 'all' // Works in both client and server
+    addPlugin(resolve('./runtime/plugins/i18n'))
+    addPlugin(resolve('./runtime/plugins/i18n-meta'))
+    
+    // Store module options as an environment variable
+    // This makes them accessible to server handlers
+    nuxt.options.runtimeConfig.stufioi18nOptions = options
+    
+    // Store module options as an environment variable for server handlers
+    // This ensures they can access the config
+    process.env.STUFIO_I18N_CONFIG = JSON.stringify(options)
+
+    // Log that we've set the environment variable
+    console.log('[stufio-i18n] Set STUFIO_I18N_CONFIG environment variable:', 
+      process.env.STUFIO_I18N_CONFIG)
+
+    // Add server handlers - with proper setup to inject config
+    const apiPathPrefix = options.apiPathPrefix || '/_stufio/i18n'
+    
+    addServerHandler({
+      route: `${apiPathPrefix}/missing`,
+      handler: resolve('./runtime/server/api/missing.post')
     })
     
-    // Provide module options to runtime config
+    addServerHandler({
+      route: `${apiPathPrefix}/translations`,
+      handler: resolve('./runtime/server/api/translations.get')
+    })
+
+    // Register server middleware that preloads translations at startup
+    addServerHandler({
+      route: '/api/_stufio_preload',
+      handler: resolve('./runtime/server/middleware/preload-translations')
+    });
+
+    // Register an internal hook to trigger preloading when Nitro server starts
+    nuxt.hooks.hook('nitro:init', (nitro) => {
+      nitro.hooks.hook('compiled', () => {
+        console.log('[stufio-i18n] 🔄 Server compiled, translations will be preloaded on first request')
+      })
+    })
+    
+    // Add runtime config
     nuxt.options.runtimeConfig.public.stufioi18n = options
+
+    // Add imports directory
+    addImportsDir(resolve('./utils'))
   }
 })

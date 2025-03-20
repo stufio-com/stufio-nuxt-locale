@@ -1,8 +1,24 @@
 {
-  "name": "my-module",
-  "version": "1.0.0",
-  "description": "My new Nuxt module",
-  "repository": "your-org/my-module",
+  "name": "stufio-nuxt-locale",
+  "version": "0.1.0",
+  "description": "Lightweight i18n module for Nuxt 3 with dynamic API-based translations loading",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/stufio-com/stufio-nuxt-locale.git"
+  },
+  "homepage": "https://github.com/stufio-com/stufio-nuxt-locale#readme",
+  "bugs": {
+    "url": "https://github.com/stufio-com/stufio-nuxt-locale/issues"
+  },
+  "keywords": [
+    "nuxt",
+    "nuxt3",
+    "i18n",
+    "translations",
+    "locale",
+    "vue",
+    "stufio"
+  ],
   "license": "MIT",
   "type": "module",
   "exports": {

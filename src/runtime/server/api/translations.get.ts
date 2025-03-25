@@ -8,9 +8,6 @@ export default defineEventHandler(async (event) => {
     const query = getQuery(event)
     const locale = query.locale?.toString()
     
-    // Get request headers to check for cache hint
-    const isCacheRequest = event.node.req.headers['x-stufio-i18n-cache'] === 'true'
-    
     // Get config from environment variable 
     let config = {
       moduleName: 'admin',
@@ -46,10 +43,15 @@ export default defineEventHandler(async (event) => {
     const cacheMaxAge = 3600000; // 1 hour in milliseconds
     if (translationCache.has(locale) && translationCache.age(locale) < cacheMaxAge) {
       // If this is an internal cache request, reduce logging
-      if (!isCacheRequest || process.dev) {
+      if (process.dev) {
         console.log(`[stufio-i18n] Using cached translations for ${locale}`)
       }
       return translationCache.get(locale);
+    } else {
+      console.log(`[stufio-i18n] Cache miss for ${locale}`)
+      if (translationCache.has(locale)) {
+        console.log(`[stufio-i18n] Cache expired for ${locale}, it's age is ${translationCache.age(locale)}ms`)
+      }
     }
     
     try {

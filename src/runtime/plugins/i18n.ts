@@ -61,27 +61,14 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     try {
       // Different approach for client vs server
       let translations;
-      
-      // On server, try to use the HTTP endpoint which will use the server cache
-      if (process.server) {
-        const apiUrl = `/_stufio/i18n/translations?locale=${locale}&module=${options.moduleName}`
-        
-        // Reduce visible logs
-        if (process.dev) {
-          console.log(`[i18n] Server: Fetching from cached endpoint: ${apiUrl}`)
-        }
-        
-        translations = await $fetch(apiUrl, {
-          // Add a cache flag to hint our server handler this is an internal request
-          headers: { 'X-Stufio-I18n-Cache': 'true' }
-        })
-      }
-      // On client, use the internal proxy
-      else {
-        const apiUrl = `/_stufio/i18n/translations?locale=${locale}&module=${options.moduleName}`
-        console.log(`[i18n] Client: Fetching translations from: ${apiUrl}`)
-        translations = await $fetch(apiUrl)
-      }
+
+      const apiUrl = `/_stufio/i18n/translations?locale=${locale}&module=${options.moduleName}`;
+      console.log(
+        `[i18n] ${
+          process.client ? "client" : "server"
+        }: Fetching translations from: ${apiUrl}`
+      );
+      translations = await $fetch(apiUrl);
       
       if (translations && typeof translations === 'object') {
         // Reduce visible logs on server
@@ -91,6 +78,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         
         i18nState.value.translations[locale] = translations
         i18nState.value.loadedLocales[locale] = true
+        
         return translations
       } else {
         console.error(`[i18n] Invalid translations response:`, translations)

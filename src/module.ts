@@ -70,12 +70,6 @@ export default defineNuxtModule<LocaleOptions>({
       handler: resolve('./runtime/server/api/translations.get')
     })
 
-    // Register server middleware that preloads translations at startup
-    addServerHandler({
-      route: '/api/_stufio_preload',
-      handler: resolve('./runtime/server/middleware/preload-translations')
-    });
-
     // Register an internal hook to trigger preloading when Nitro server starts
     nuxt.hooks.hook('nitro:init', (nitro) => {
       nitro.hooks.hook('compiled', () => {
